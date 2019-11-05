@@ -1,0 +1,151 @@
+module mojo_top (
+    input clk,              // 50MHz clock
+    input rst_n,            // reset button (active low)
+    output led [8],         // 8 user controllable LEDs
+    input cclk,             // configuration clock, AVR ready when high
+    output spi_miso,        // AVR SPI MISO
+    input spi_ss,           // AVR SPI Slave Select
+    input spi_mosi,         // AVR SPI MOSI
+    input spi_sck,          // AVR SPI Clock
+    output spi_channel [4], // AVR general purpose pins (used by default to select ADC channel)
+    input avr_tx,           // AVR TX (FPGA RX)
+    output avr_rx,          // AVR RX (FPGA TX)
+    input avr_rx_busy,       // AVR RX buffer full
+    output io_led[3][8],
+    output io_seg[8],
+    output io_sel[4],
+    input io_button[5],
+    input io_dip[3][8]
+
+    
+  ) {
+  
+  sig rst;                  // reset signal
+  
+  alu16 alu;
+  
+  test_case_rom rom;
+  
+  .clk(clk) {
+    // The reset conditioner is used to synchronize the reset signal to the FPGA
+    // clock. This ensures the entire FPGA comes out of reset at the same time.
+    reset_conditioner reset_cond;
+    reset_conditioner a_con(.in(io_button[3]));
+    
+    reset_conditioner b_con(.in(io_button[4]));
+    
+    reset_conditioner start(.in(io_button[0]));
+    
+    .rst(rst){
+    
+      dff a[16];
+      
+      dff b[16];
+      
+      test_driver driver(#SEL_MAX(53),.start(start.out),.ref_out(rom.ref_out));//???
+      sevseg4 sevseg;
+      
+      
+
+      
+      
+      
+    
+    }
+
+    
+  }
+
+  
+  always {
+    reset_cond.in = ~rst_n; // input raw inverted reset signal
+    rst = reset_cond.out;   // conditioned reset
+    
+    led = 8h00;             // turn LEDs off
+    spi_miso = bz;          // not using SPI
+    spi_channel = bzzzz;    // not using flags
+    avr_rx = bz;            // not using serial port
+    
+    io_led=3x{{8h00}};
+    io_seg=8hff;
+    io_sel=4hf;
+
+
+    case(a_con.out){
+    
+      1:
+      
+        a.d=c{io_dip[1],io_dip[0]};
+      
+      default:
+      
+        a.d=a.q; 
+    }
+    case(b_con.out){
+    
+      1:
+      
+        b.d=c{io_dip[1],io_dip[0]};
+        
+      default:
+      
+        b.d=b.q;
+    }
+    case(~driver.done&driver.pass){
+    
+      1:
+      
+        alu.a=rom.a;
+        alu.b=rom.b;
+        alu.alufn=rom.alufn;
+        
+      default:
+      
+        alu.alufn=io_dip[2][5:0];
+        alu.a=a.q;
+        alu.b=b.q;
+           
+    }
+    rom.sel=driver.sel;
+    driver.alu_out=alu.alu | c{io_dip[1],io_dip[0]};
+  
+    case({driver.done&driver.pass}){
+    
+      {1,1}:
+      
+        sevseg.segs_array={8b01110011,8b01110111,8b01101101,8b01101101};
+        io_led[1]=alu.alu[15:8];
+        io_led[0]=alu.alu[7:0];
+        
+      {1,0}:
+        
+        sevseg.segs_array={8b01110001,8b01110111,8b00110000,8b00111000};
+        io_led[2]=rom.alufn;
+        io_led[1]=driver.sel;
+        
+      {0,1}:
+        
+        io_led[1]=alu.alu[15:8];
+        io_led[0]=alu.alu[7:0];
+        sevseg.segs_array={8b01110011,8b01110111,8b01101101,8b01101101};
+        
+        
+      default:
+      
+        sevseg.segs_array={8b0,8b0,8b0,8b0};
+        
+        
+    }
+    io_led[2][5]=alu.z;
+    io_led[2][6]=alu.v;
+    io_led[2][7]=alu.n;
+    
+    io_seg=~sevseg.segs;
+    io_sel=~sevseg.sel;
+    
+    
+    
+    
+    
+  }
+}

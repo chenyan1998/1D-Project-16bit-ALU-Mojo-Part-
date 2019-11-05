@@ -1,0 +1,31 @@
+
+module compare16 (
+    input alufn[4],    
+    input z,           
+    input v,           
+    input n,           
+    output cmp[16]     
+  ) {
+
+
+  sig lt;              
+  sig eq;              
+  sig le;
+  
+  always {
+
+    cmp = 16b0;
+    
+    eq = z;
+    lt = (n ^ v);
+    le = eq | lt;
+    
+    case(alufn[2:1]){
+      b01: cmp[0] = eq;
+      b10: cmp[0] = lt;
+      b11: cmp[0] = le;
+      default: cmp[0]=0;
+    }
+
+  }
+}

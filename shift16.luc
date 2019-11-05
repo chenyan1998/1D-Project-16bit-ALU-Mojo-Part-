@@ -1,0 +1,16 @@
+module shift16 (
+    input alufn[4], 
+    input a[16], 
+    input b[5],
+    output shift[16]
+  )
+{
+  always {
+    case ({alufn[1], alufn[0]}) {
+    {0,0} : shift=a<<b;
+    {0,1} : shift=a>>b;
+    {1,1} : shift=$signed(a)>>>b;
+    default: shift=a;
+    }
+  }
+  }

@@ -1,0 +1,39 @@
+module alu16 (
+    input alufn[6],    
+    input a[16],       
+    input b[16],       
+    output alu[16],    
+    output z,          
+    output v,         
+    output n   
+  ) {
+
+  .alufn(alufn[3:0]) {
+    .a(a) {
+  
+      shift16 shifter(.b(b[4:0]));
+      
+      .b(b) {
+        adder16 addercomp;
+        boole16 boolean;
+      }
+    }
+  
+    compare16 comparator(.z(addercomp.z), .v(addercomp.v), .n(addercomp.n));
+  }
+    
+  always {
+
+    z = addercomp.z;
+    v = addercomp.v;
+    n = addercomp.n;
+
+    case(alufn[5:4]) {
+      b00: alu = addercomp.out;
+      b01: alu = boolean.boole;
+      b10: alu = shifter.shift;
+      b11: alu = comparator.cmp;
+      default: alu = 16b0;
+    }
+  }
+}
